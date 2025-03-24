@@ -1,0 +1,48 @@
+name: Tuta 邮箱自动登录
+
+on:
+  schedule:
+    # 每月1日和15日运行，确保在6个月内保持活动
+    - cron: '0 0 1,15 * *'
+  # 允许手动触发
+  workflow_dispatch:
+
+# 添加权限配置来解决推送错误
+permissions:
+  contents: write
+
+jobs:
+  login:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install selenium webdriver-manager
+          
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v1
+        
+      - name: Setup ChromeDriver
+        uses: nanasess/setup-chromedriver@v2
+        
+      - name: Run login script
+        env: ${{ secrets }}
+        run: python login.py
+        
+      - name: Commit and push log file
+        if: always()  # 无论成功失败都记录
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add login_history.log
+          git commit -m "Update login history" || echo "No changes to commit"
+          git push
